@@ -17,7 +17,7 @@
 body {min-height:100dvh}
 .workspace {
   display:grid;
-  grid-template:"library code" auto "library actions" 1fr / clamp(292px, 31vw, 380px) minmax(0, 1fr);
+  grid-template:"library code" max-content "library actions" minmax(0, 1fr) / clamp(292px, 31vw, 380px) minmax(0, 1fr);
   gap:14px;
   width:100%;
   max-width:1340px;

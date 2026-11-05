@@ -20,6 +20,7 @@ RUNTIME_SHA256 = "90905e64a840557d8c1bc4f5b74db3d7ee85e3ffb217611cac1c7813acea41
 APP_FILES = (
     "启动收码工具.bat", "启动局域网诊断.bat", "Windows使用说明.txt", "mailtool.py", "README.md", "LICENSE",
     "web/index.html", "web/style.css", "web/app.js",
+    "docs/images/mailtool-mark.svg", "docs/images/desktop-preview.jpg", "docs/images/mobile-preview.jpg",
 )
 REQUIRED_RUNTIME = {
     "python.exe", "python314.dll", "python3.dll", "python314.zip", "python314._pth",
