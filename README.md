@@ -4,7 +4,7 @@
 
 # Receive Mail Tool
 
-### 收码台 · Outlook 邮箱验证码工作台
+### 收码台 · Hotmail / Outlook 邮箱验证码工作台
 
 批量导入已授权的 Hotmail / Outlook.com 邮箱。<br />
 按批查收邮件，在同一个页面查看、核对和复制最新验证码。
@@ -18,16 +18,11 @@
 
 </div>
 
-![收码台桌面工作台。左侧是编号邮箱列表，右侧显示本批最新验证码和收信设置](docs/images/desktop-preview.jpg)
+<p align="center">
+  <img src="docs/images/desktop-preview.jpg" width="78%" alt="桌面工作台。左侧为邮箱列表，右侧为验证码和收信设置" />&nbsp;<img src="docs/images/mobile-preview.jpg" width="19%" alt="H5 竖屏工作台。顶部为验证码，中间为邮箱列表，底部为操作区" />
+</p>
 
-<p align="center"><sub>桌面工作台预览。图中的邮箱、邮件和验证码均为模拟数据。</sub></p>
-
-<details>
-<summary>查看窄窗口预览</summary>
-
-<p align="center"><img src="docs/images/mobile-preview.jpg" width="390" alt="窄窗口布局。顶部是验证码，中间是可滚动的邮箱列表，底部是操作区" /></p>
-
-</details>
+<p align="center"><sub>桌面与 H5 预览。图中的邮箱、邮件和验证码均为模拟数据。</sub></p>
 
 ## 功能介绍
 
@@ -64,7 +59,7 @@ cd Receive-Mail-Tool
 
 ## 邮箱授权
 
-支持本人拥有或获授权管理的 Microsoft 个人邮箱。导入时需要配对的 OAuth 应用 `client_id` 和邮箱 `refresh_token`。四段之间使用 `----` 分隔。
+支持本人拥有或获授权管理的 Hotmail 和 Outlook.com 个人邮箱。导入时需要配对的 OAuth 应用 `client_id` 和邮箱 `refresh_token`。四段之间使用 `----` 分隔。
 
 ```text
 demo@example.com----unused----YOUR_CLIENT_ID----YOUR_REFRESH_TOKEN
@@ -124,7 +119,7 @@ Python 测试使用模拟邮箱和临时数据库，覆盖验证码提取、批�
 
 ## 项目缘起
 
-芊羽最初从 wuemail.cn 购买了一批 Hotmail / Outlook.com 邮箱。收码台就是为集中查收这批邮箱的验证码而做的，最早的导入格式也来自该服务商的四段式账号信息。[查看服务商商品页](https://wuemail.cn/item/120)
+芊羽最初从小布微软邮箱批发购买了一批 Hotmail 邮箱。收码台就是为集中查收这批邮箱的验证码而做的，最早的导入格式也来自该服务商的四段式账号信息。[查看 Hotmail 商品页](https://wuemail.cn/item/120)
 
 ## 许可证
 
