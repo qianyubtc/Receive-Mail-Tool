@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>收码台 · 邮箱验证码</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="workspace">
+    <section class="batch-panel" aria-labelledby="batch-title">
+      <h1 id="batch-title">本批最新验证码</h1>
+      <div id="code-feed" class="code-feed" aria-live="polite"><div class="feed-empty">暂无验证码</div></div>
+    </section>
+
+    <section class="sidebar" aria-labelledby="library-title">
+      <div class="library-heading"><h2 id="library-title">邮箱 <span id="account-count">0</span></h2><span id="selected-count" class="selection-count">已选 0 / 20</span></div>
+      <div class="search-wrap"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="搜索邮箱或编号" aria-label="搜索邮箱或编号" autocomplete="off"></div>
+      <div class="list-options"><label><input id="select-page" type="checkbox"> 选择本页</label><select id="account-filter" aria-label="邮箱使用状态"><option value="all">全部邮箱</option><option value="unused">未使用</option><option value="used">已使用</option></select></div>
+      <div id="accounts" class="account-list" aria-label="邮箱列表" tabindex="0"></div>
+      <div class="pagination"><button id="page-prev" class="icon-button" aria-label="上一页邮箱">‹</button><span id="page-label">0 / 0</span><button id="page-next" class="icon-button" aria-label="下一页邮箱">›</button></div>
+    </section>
+
+    <section class="workspace-actions" aria-label="监听与邮箱管理">
+      <div id="error" class="notice error" role="alert" hidden></div>
+      <div id="warning" class="notice warning" role="status" hidden></div>
+      <div class="toolbar">
+        <div class="controls"><button id="batch-start" class="button primary" disabled>开始监听</button><button id="batch-stop" class="button subtle" disabled>停止</button><button id="batch-next" class="button subtle" disabled>完成本批 → 下一批</button></div>
+        <div class="monitor-state"><span id="state-dot" class="state-dot"></span><span id="monitor-label">未监听</span></div>
+      </div>
+      <div class="utility-row">
+        <button id="import-open" class="button subtle">导入邮箱</button>
+        <button id="manage" class="button subtle">管理邮箱</button>
+        <details class="receive-options"><summary>收信设置</summary><div class="receive-fields">
+          <label>协议 <select id="protocol"><option value="graph">Graph</option><option value="imap">IMAP</option></select></label>
+          <label>间隔 <select id="interval"><option value="5">5 秒</option><option value="10" selected>10 秒</option><option value="15">15 秒</option><option value="30">30 秒</option></select></label>
+          <label class="recent-option"><input id="include-recent" type="checkbox"> 显示监听前 10 分钟的邮件</label>
+          <span id="batch-progress"></span>
+        </div></details>
+      </div>
+      <div id="manage-tools" class="manage-tools" hidden><button id="delete-selected" class="text-button danger" disabled>删除选中</button><button id="purge-selected" class="text-button danger" hidden disabled>彻底删除选中</button><button id="purge-all" class="text-button danger" hidden disabled>清空回收站</button><button id="trash-toggle" class="text-button">回收站 <span id="trash-count">0</span></button></div>
+
+    <details id="mail-detail" class="mail-detail" hidden><summary>单个邮箱详情 <span id="detail-name"></span></summary><div class="detail-toolbar"><strong id="active-email">尚未选择邮箱</strong><div><button id="copy-email" class="button subtle" disabled>复制邮箱</button><button id="next-account" class="button subtle" disabled>下一个邮箱</button><button id="refresh" class="button subtle" disabled><span id="refresh-icon">↻</span> 单独查收</button></div></div><section class="code-card" aria-label="最新验证码">
+      <div class="code-card-top"><div><span class="section-label">LATEST CODE</span><h2 id="code-heading">最新验证码</h2></div><span id="code-badge" class="badge">尚未收信</span></div>
+      <div class="code-row"><div id="code" class="code empty">— — — — — —</div><button id="copy-code" class="button copy-button" disabled>复制验证码 <span aria-hidden="true">⧉</span></button></div>
+      <p id="code-source" class="code-source">选择邮箱，可查看最近邮件和历史验证码。</p>
+      <div class="code-card-bottom"><span id="code-time">收件箱与垃圾箱一起查收</span><span id="checked-time">尚未查收</span></div>
+    </section>
+
+    <section class="mail-section">
+      <div class="section-heading"><h2>最近邮件 <span id="message-count">0</span></h2><span>每个文件夹最多 10 封</span></div>
+      <div class="mail-workspace"><div id="messages" class="message-list" aria-label="最近邮件列表"><div class="empty-state"><div class="empty-envelope">✉</div><h3>邮件会出现在这里</h3><p>选中邮箱后自动查收，无需逐个登录。</p></div></div><article class="message-preview"><div id="preview-empty" class="preview-empty">选择一封邮件查看正文</div><div id="preview-content" hidden><div class="preview-label">邮件正文</div><h3 id="preview-subject"></h3><p id="preview-meta"></p><pre id="preview-body"></pre></div></article></div>
+    </section>
+    </details>
+    </section>
+  </main>
+
+  <dialog id="import-dialog"><form id="import-form"><div class="dialog-heading"><div><span class="section-label">IMPORT ACCOUNTS</span><h2>批量导入邮箱</h2></div><button id="import-close" type="button" class="icon-button" aria-label="关闭导入">×</button></div><p>粘贴账号信息，一行一个。</p><label for="import-text" class="format-label">邮箱----密码----client_id----refresh_token</label><textarea id="import-text" rows="9" spellcheck="false" autocomplete="off" placeholder="将账号内容粘贴到这里…" required></textarea><div class="import-help">密码不参与收信，也不会保存。重复邮箱会更新凭证。</div><div id="import-error" class="notice error" role="alert" hidden></div><div class="dialog-footer"><input id="import-file" type="file" accept=".txt,text/plain" hidden><button id="choose-file" class="button subtle" type="button">选择 TXT 文件</button><button id="import-submit" class="button primary" type="submit">导入邮箱</button></div></form></dialog>
+  <dialog id="purge-dialog" aria-labelledby="purge-heading"><form id="purge-form"><div class="dialog-heading"><div><span class="section-label">DELETE PERMANENTLY</span><h2 id="purge-heading">确认彻底删除</h2></div><button id="purge-close" type="button" class="icon-button" aria-label="取消彻底删除">×</button></div><p id="purge-description"></p><div id="purge-list" class="purge-list"></div><p class="purge-warning">将移除本地账号、刷新令牌、邮件缓存和验证码记录，无法从回收站恢复。邮箱服务器上的邮件不受影响。</p><div id="purge-error" class="notice error" role="alert" hidden></div><div class="dialog-footer"><button id="purge-cancel" class="button subtle" type="button">取消</button><button id="purge-confirm" class="button danger-button" type="submit">确认彻底删除</button></div></form></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
