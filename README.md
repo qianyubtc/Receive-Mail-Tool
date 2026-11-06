@@ -14,6 +14,8 @@
 [![本机运行](https://img.shields.io/badge/Deployment-Local-546859.svg)](#本机数据)
 [![MIT License](https://img.shields.io/badge/License-MIT-44785d.svg)](LICENSE)
 
+[**下载 Windows x64 免安装版**](https://github.com/qianyubtc/Receive-Mail-Tool/releases/latest/download/Receive-Mail-Tool-Windows-x64.zip)
+
 [功能介绍](#功能介绍) · [快速开始](#快速开始) · [邮箱授权](#邮箱授权) · [常见问题](#常见问题) · [构建与验证](#构建与验证)
 
 </div>
@@ -35,6 +37,12 @@
 | 本地管理 | 查看单个邮箱的近期邮件，按使用状态筛选，从回收站恢复或彻底移除本地记录。 |
 
 ## 快速开始
+
+### Windows 免安装版
+
+下载 [Windows x64 免安装包](https://github.com/qianyubtc/Receive-Mail-Tool/releases/latest/download/Receive-Mail-Tool-Windows-x64.zip)，完整解压后双击 `MailCode/启动收码工具.bat`。适用于 Windows 10 / 11 x64，已内置 Python。
+
+### 从源码运行
 
 安装 [Python 3.9 或更高版本](https://www.python.org/downloads/)。程序只使用 Python 标准库。可以从仓库的 **Code → Download ZIP** 下载并解压源码，也可以克隆仓库。
 
