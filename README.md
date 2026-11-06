@@ -7,14 +7,14 @@
 ### 收码台 · Hotmail / Outlook 邮箱验证码工作台
 
 批量导入已授权的 Hotmail / Outlook.com 邮箱。<br />
-按批查收邮件，在同一个页面查看、核对和复制最新验证码。
+桌面版按批收信。服务器版提供 Web 管理台、单邮箱监听和 Webhook 回调。
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-5b8b49.svg)](https://www.python.org/downloads/)
 [![Graph / IMAP](https://img.shields.io/badge/Mail-Graph%20%2F%20IMAP-397061.svg)](#邮箱授权)
-[![本机运行](https://img.shields.io/badge/Deployment-Local-546859.svg)](#本机数据)
+[![桌面与服务器部署](https://img.shields.io/badge/Deployment-Desktop%20%2F%20Server-546859.svg)](#快速开始)
 [![MIT License](https://img.shields.io/badge/License-MIT-44785d.svg)](LICENSE)
 
-[**下载 Windows x64 免安装版**](https://github.com/qianyubtc/Receive-Mail-Tool/releases/latest/download/Receive-Mail-Tool-Windows-x64.zip)
+[**下载 Windows x64 免安装版**](https://github.com/qianyubtc/Receive-Mail-Tool/releases/download/v2026.11.07/Receive-Mail-Tool-Windows-x64.zip) · [**下载服务器版**](https://github.com/qianyubtc/Receive-Mail-Tool/releases/download/server-v2026.11.07/Receive-Mail-Tool-Server.zip)
 
 [功能介绍](#功能介绍) · [快速开始](#快速开始) · [邮箱授权](#邮箱授权) · [常见问题](#常见问题) · [构建与验证](#构建与验证)
 
@@ -40,9 +40,31 @@
 
 ### Windows 免安装版
 
-下载 [Windows x64 免安装包](https://github.com/qianyubtc/Receive-Mail-Tool/releases/latest/download/Receive-Mail-Tool-Windows-x64.zip)，完整解压后双击 `MailCode/启动收码工具.bat`。适用于 Windows 10 / 11 x64，已内置 Python。
+下载 [Windows x64 免安装包](https://github.com/qianyubtc/Receive-Mail-Tool/releases/download/v2026.11.07/Receive-Mail-Tool-Windows-x64.zip)，完整解压后双击 `MailCode/启动收码工具.bat`。适用于 Windows 10 / 11 x64，已内置 Python。
 
-### 从源码运行
+### 服务器版部署
+
+下载 [服务器版部署包](https://github.com/qianyubtc/Receive-Mail-Tool/releases/download/server-v2026.11.07/Receive-Mail-Tool-Server.zip) 并在服务器上解压。需要 Python 3.9 或更高版本，推荐 Python 3.14，以便使用 IMAP IDLE。
+
+1. 分别生成两个独立的随机令牌。运行以下命令两次。
+
+   ```sh
+   python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
+   ```
+
+2. 在解压目录配置令牌并启动。将示例值替换为上一步生成的令牌。
+
+   ```sh
+   export MAILTOOL_API_TOKEN='YOUR_RANDOM_API_TOKEN'
+   export MAILTOOL_ADMIN_TOKEN='YOUR_RANDOM_ADMIN_TOKEN'
+   python3 mailtool_server.py serve
+   ```
+
+3. 同机打开 `http://127.0.0.1:8770/admin`，用管理令牌登录，导入邮箱 TXT。可以在网页手动收码，也可以在「收信设置」中配置业务 API 的 Webhook 回调。跨机器访问时，通过 HTTPS 反向代理转发到本机端口。
+
+网页和 API 共用一个当前监听任务。提交新邮箱会替换上一个任务。[完整部署与接口说明](SERVER.md)
+
+### 从源码运行桌面版
 
 安装 [Python 3.9 或更高版本](https://www.python.org/downloads/)。程序只使用 Python 标准库。可以从仓库的 **Code → Download ZIP** 下载并解压源码，也可以克隆仓库。
 

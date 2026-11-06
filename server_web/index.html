@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>收码台 · 服务器管理</title>
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/admin/admin.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">＠</span><div><strong>收码台</strong><small>服务器管理</small></div></div>
+    <div id="admin-actions" class="actions" hidden>
+      <button id="open-settings">收信设置</button>
+      <button id="logout">退出</button>
+    </div>
+  </header>
+
+  <main class="page">
+    <form id="login-form" class="card login">
+      <h1>进入管理台</h1>
+      <p class="muted">使用服务器配置的管理令牌登录。</p>
+      <label for="admin-token">管理令牌</label>
+      <input id="admin-token" type="password" required autocomplete="off" spellcheck="false">
+      <p id="login-error" class="error" role="alert" hidden></p>
+      <button class="primary" type="submit">进入管理台</button>
+    </form>
+
+    <div id="dashboard" class="dashboard" hidden>
+      <section class="card receiver" aria-labelledby="receiver-title">
+        <div class="section-title">
+          <div><h1 id="receiver-title">验证码</h1><p id="current-email" class="muted">还没有监听任务</p></div>
+          <span id="watch-status" class="pill">未监听</span>
+        </div>
+        <div class="code-row">
+          <output id="code" aria-live="polite">— — —</output>
+          <button id="copy-code" disabled>复制验证码</button>
+        </div>
+        <div class="listen-actions">
+          <p id="selection" class="muted">从邮箱列表选择一个邮箱。</p>
+          <div class="actions">
+            <button id="stop" disabled>停止</button>
+            <button id="start" class="primary" disabled>开始监听</button>
+          </div>
+        </div>
+        <p id="watch-note" class="note" role="status"></p>
+      </section>
+
+      <section class="card library" aria-labelledby="library-title">
+        <div class="section-title">
+          <h2 id="library-title">邮箱 <span id="count" class="count">0</span></h2>
+          <button id="open-import">导入邮箱</button>
+        </div>
+        <input id="search" type="search" placeholder="搜索邮箱地址" aria-label="搜索邮箱">
+        <div id="account-list" class="mail-list" aria-label="邮箱列表"></div>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="import-dialog" aria-labelledby="import-title">
+    <form id="import-form">
+      <h2 id="import-title">导入邮箱</h2>
+      <p class="muted">粘贴清单或选择 TXT，每行一个邮箱。</p>
+      <code class="format">邮箱----密码----client_id----refresh_token</code>
+      <label for="import-file">选择 TXT 文件</label>
+      <input id="import-file" type="file" accept=".txt,text/plain">
+      <label for="import-text">邮箱清单</label>
+      <textarea id="import-text" rows="7" required spellcheck="false" autocomplete="off"></textarea>
+      <p id="import-error" class="error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button id="close-import" type="button">取消</button>
+        <button id="submit-import" class="primary" type="submit">确认导入</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <form id="settings-form">
+      <h2 id="settings-title">收信设置</h2>
+      <p class="muted">保存后从下一次监听开始生效。</p>
+      <div class="field-grid">
+        <label>收信协议
+          <select id="protocol">
+            <option value="auto">自动</option>
+            <option value="imap">IMAP</option>
+            <option value="graph">Graph</option>
+          </select>
+        </label>
+        <label>补查间隔（秒）
+          <input id="interval" type="number" min="1" max="30" step="any" required>
+        </label>
+        <label>监听时长（秒）
+          <input id="timeout" type="number" min="10" max="300" step="1" required>
+        </label>
+      </div>
+      <div class="settings-divider"></div>
+      <div class="section-title">
+        <h3>业务 API 回调</h3>
+        <span id="webhook-status" class="pill"></span>
+      </div>
+      <label for="webhook-url">Webhook 地址</label>
+      <input id="webhook-url" type="url" placeholder="https://your-service.example/webhooks/mail-code">
+      <label for="webhook-secret">签名密钥</label>
+      <input id="webhook-secret" type="password" minlength="32" autocomplete="new-password">
+      <p class="muted hint">API 开启的监听会发送回调。网页开启的监听在页面显示结果。</p>
+      <p id="settings-error" class="error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button id="close-settings" type="button">取消</button>
+        <button id="submit-settings" class="primary" type="submit">保存设置</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

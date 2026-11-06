@@ -153,6 +153,11 @@ class Store:
             raise MailError("邮箱不存在，请重新选择")
         return Account(*row)
 
+    def find_account_id(self, address):
+        with self.connect() as db:
+            row = db.execute("SELECT id FROM accounts WHERE email=? AND deleted=0", (address,)).fetchone()
+        return row[0] if row else None
+
     def accounts(self, trash=False):
         with self.connect() as db:
             rows = db.execute("SELECT id,email,checked_at,error,used FROM accounts WHERE deleted=? ORDER BY id ASC", (int(trash),)).fetchall()
@@ -411,30 +416,42 @@ def refresh_access(account, protocol):
     return result
 
 
+MAIL_FOLDERS = (("inbox", "收件箱"), ("junkemail", "垃圾箱"))
+
+
+def graph_folder_messages(access_token, folder, label, received_since=None):
+    params = {"$top": 10, "$orderby": "receivedDateTime desc",
+              "$select": "id,internetMessageId,subject,from,receivedDateTime,body,isRead"}
+    if received_since is not None:
+        params["$filter"] = "receivedDateTime ge " + received_since
+    query = urllib.parse.urlencode(params)
+    request = urllib.request.Request(GRAPH_URL + "/" + folder + "/messages?" + query,
+                                     headers={"Authorization": "Bearer " + access_token,
+                                              "Prefer": 'outlook.body-content-type="text"'})
+    result = read_json(request)
+    if not isinstance(result, dict) or not isinstance(result.get("value"), list):
+        raise MailError("微软邮件接口返回了无效的邮件列表")
+    messages = []
+    for item in result["value"]:
+        body_data = item.get("body") or {}
+        body = body_data.get("content") or ""
+        if str(body_data.get("contentType", "")).lower() == "html":
+            body = html_to_text(body)
+        subject = item.get("subject") or "（无主题）"
+        sender = ((item.get("from") or {}).get("emailAddress") or {})
+        messages.append({"id": item.get("id", ""), "subject": subject,
+                         "internet_message_id": item.get("internetMessageId", ""),
+                         "sender": sender.get("address") or sender.get("name", ""),
+                         "received_at": item.get("receivedDateTime", ""), "folder": label,
+                         "body": body[:100000], **extract_code(subject, body)})
+    return messages
+
+
 def graph_messages(access_token):
     messages, warnings = [], []
-    for folder, label in (("inbox", "收件箱"), ("junkemail", "垃圾箱")):
-        query = urllib.parse.urlencode({"$top": 10, "$orderby": "receivedDateTime desc",
-                                       "$select": "id,internetMessageId,subject,from,receivedDateTime,body,isRead"})
-        request = urllib.request.Request(GRAPH_URL + "/" + folder + "/messages?" + query,
-                                         headers={"Authorization": "Bearer " + access_token,
-                                                  "Prefer": 'outlook.body-content-type="text"'})
+    for folder, label in MAIL_FOLDERS:
         try:
-            result = read_json(request)
-            if not isinstance(result, dict) or not isinstance(result.get("value"), list):
-                raise MailError("微软邮件接口返回了无效的邮件列表")
-            for item in result["value"]:
-                body_data = item.get("body") or {}
-                body = body_data.get("content") or ""
-                if str(body_data.get("contentType", "")).lower() == "html":
-                    body = html_to_text(body)
-                subject = item.get("subject") or "（无主题）"
-                sender = ((item.get("from") or {}).get("emailAddress") or {})
-                messages.append({"id": item.get("id", ""), "subject": subject,
-                                 "internet_message_id": item.get("internetMessageId", ""),
-                                 "sender": sender.get("address") or sender.get("name", ""),
-                                 "received_at": item.get("receivedDateTime", ""), "folder": label,
-                                 "body": body[:100000], **extract_code(subject, body)})
+            messages.extend(graph_folder_messages(access_token, folder, label))
         except MailError as exc:
             if exc.retry_after:
                 raise
@@ -470,26 +487,39 @@ def parse_mime(raw, uid, folder, internal_date=""):
             "folder": folder, "body": body[:100000], **extract_code(subject, body)}
 
 
+def imap_connect():
+    return imaplib.IMAP4_SSL("outlook.office365.com", 993, ssl_context=ssl.create_default_context(), timeout=TIMEOUT)
+
+
+def imap_authenticate(client, address, access_token):
+    auth = ("user=%s\x01auth=Bearer %s\x01\x01" % (address, access_token)).encode()
+    # Terminate a failed XOAUTH2 challenge without resending the token.
+    replies = iter((auth, b""))
+    client.authenticate("XOAUTH2", lambda _: next(replies, b""))
+
+
+def imap_junk_folders(client):
+    junk = ["Junk", '"Junk Email"']
+    status, folders = client.list()
+    if status == "OK":
+        for folder in folders or []:
+            if not isinstance(folder, bytes):
+                continue
+            match = re.match(rb'\(([^)]*)\)\s+(?:"[^"]*"|NIL)\s+(.+)$', folder)
+            if match and b"\\junk" in match[1].lower().split():
+                junk.insert(0, match[2].decode("ascii", errors="replace"))
+    return junk
+
+
 def imap_messages(address, access_token):
     client = None
     phase = "connect"
     try:
-        client = imaplib.IMAP4_SSL("outlook.office365.com", 993, ssl_context=ssl.create_default_context(), timeout=TIMEOUT)
+        client = imap_connect()
         phase = "authenticate"
-        auth = ("user=%s\x01auth=Bearer %s\x01\x01" % (address, access_token)).encode()
-        # On a failed XOAUTH2 challenge, terminate SASL instead of repeating the token.
-        replies = iter((auth, b""))
-        client.authenticate("XOAUTH2", lambda _: next(replies, b""))
+        imap_authenticate(client, address, access_token)
         phase = "list_folders"
-        junk = ["Junk", '"Junk Email"']
-        status, folders = client.list()
-        if status == "OK":
-            for folder in folders or []:
-                if not isinstance(folder, bytes):
-                    continue
-                match = re.match(rb'\(([^)]*)\)\s+(?:"[^"]*"|NIL)\s+(.+)$', folder)
-                if match and b"\\junk" in match[1].lower().split():
-                    junk.insert(0, match[2].decode("ascii", errors="replace"))
+        junk = imap_junk_folders(client)
         messages, warnings = [], []
         for candidates, label in ((["INBOX"], "收件箱"), (junk, "垃圾箱")):
             phase = "select_folder"
@@ -551,38 +581,53 @@ class MailService:
                     if key[0] in ids:
                         self.token_cache.pop(key, None)
 
-    def fetch(self, account_id, protocol):
-        if protocol not in ("graph", "imap"):
-            raise MailError("不支持的收信协议")
+    def _acquire_account(self, account_id):
         with self.lock:
             account_lock = self.account_locks.setdefault(account_id, threading.Lock())
         if not account_lock.acquire(blocking=False):
             raise MailError("该邮箱正在收信，请稍后查看结果", retry_after=1)
+        return account_lock
+
+    def _access_token(self, account, protocol):
+        key = (account.id, protocol)
+        with self.lock:
+            cached = self.token_cache.get(key)
+        if cached and cached[1] > time.monotonic() and cached[2:] == (account.refresh_token, account.client_id, account.revision):
+            return cached[0]
+        result = refresh_access(account, protocol)
+        if self.diagnostics:
+            self.diagnostics.emit("token_refreshed", account_id=account.id, protocol=protocol)
+        new_token = result.get("refresh_token") or account.refresh_token
+        if new_token != account.refresh_token:
+            self.store.rotate_token(account, new_token)
+        access_token = result["access_token"]
+        try:
+            lifetime = max(0, min(int(result.get("expires_in", 3600)) - 60, 3600))
+        except (ValueError, TypeError):
+            lifetime = 0
+        with self.lock:
+            self.token_cache[key] = (access_token, time.monotonic() + lifetime, new_token, account.client_id, account.revision)
+        return access_token
+
+    def authorize(self, account_id, protocol):
+        account_lock = self._acquire_account(account_id)
+        try:
+            account = self.store.account(account_id)
+            return account.email, self._access_token(account, protocol)
+        finally:
+            account_lock.release()
+
+    def fetch(self, account_id, protocol):
+        if protocol not in ("graph", "imap"):
+            raise MailError("不支持的收信协议")
+        account_lock = self._acquire_account(account_id)
         self.slots.acquire()
         started, stage = time.monotonic(), "token_refresh"
         if self.diagnostics:
             self.diagnostics.emit("fetch_started", account_id=account_id, protocol=protocol)
         try:
             account = self.store.account(account_id)
-            key = (account_id, protocol)
-            with self.lock:
-                cached = self.token_cache.get(key)
-            if cached and cached[1] > time.monotonic() and cached[2:] == (account.refresh_token, account.client_id, account.revision):
-                access_token = cached[0]
-            else:
-                result = refresh_access(account, protocol)
-                if self.diagnostics:
-                    self.diagnostics.emit("token_refreshed", account_id=account_id, protocol=protocol)
-                new_token = result.get("refresh_token") or account.refresh_token
-                if new_token != account.refresh_token:
-                    self.store.rotate_token(account, new_token)
-                access_token = result["access_token"]
-                try:
-                    lifetime = max(0, min(int(result.get("expires_in", 3600)) - 60, 3600))
-                except (ValueError, TypeError):
-                    lifetime = 0
-                with self.lock:
-                    self.token_cache[key] = (access_token, time.monotonic() + lifetime, new_token, account.client_id, account.revision)
+            access_token = self._access_token(account, protocol)
             stage = "read_messages"
             if protocol == "graph":
                 messages, warnings = graph_messages(access_token)
