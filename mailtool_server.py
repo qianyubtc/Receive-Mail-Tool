@@ -14,7 +14,7 @@ import secrets
 import sqlite3
 import threading
 import time
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from contextlib import closing
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -332,6 +332,7 @@ class SingleMailboxMonitor:
         self.condition = threading.Condition()
         self.current = None
         self.watches = OrderedDict()
+        self.cancelled_ids = deque(maxlen=128)
         self.sent = OrderedDict()
         self.closed = False
         # One spare worker lets the new mailbox start while old network I/O drains.
@@ -343,14 +344,16 @@ class SingleMailboxMonitor:
         with self.condition:
             self.reader, self.webhook, self.timeout = reader, webhook, timeout
 
-    def start(self, account_id, *, address="", notify=True):
+    def start(self, account_id, *, address="", notify=True, watch_id=None):
         with self.condition:
             if notify and self.webhook is None:
                 raise mail.MailError("请先配置 Webhook 地址和签名密钥")
+            if watch_id is not None and (watch_id in self.watches or watch_id in self.cancelled_ids):
+                raise ValueError("watch_id_already_used")
             if self.current:
                 self._end_current("replaced")
             watch = Watch(
-                secrets.token_hex(16), account_id, math.floor(time.time()),
+                watch_id or secrets.token_hex(16), account_id, math.floor(time.time()),
                 time.monotonic() + self.timeout, address=address, reader=self.reader,
                 webhook=self.webhook if notify else None,
             )
@@ -368,9 +371,13 @@ class SingleMailboxMonitor:
             watch.status = status
             watch.cancel.set()
 
-    def stop(self, watch_id):
+    def stop(self, watch_id, *, api_only=False):
         with self.condition:
             if not self.current or self.current.id != watch_id:
+                if api_only and watch_id not in self.watches and watch_id not in self.cancelled_ids:
+                    self.cancelled_ids.append(watch_id)
+                return False
+            if api_only and self.current.webhook is None:
                 return False
             self._end_current("cancelled")
             return True
@@ -531,6 +538,15 @@ class APIHandler(BaseHTTPRequestHandler):
         else:
             self.reply(200, {"watch_id": match[1], "status": status})
 
+    def do_DELETE(self):
+        if not self.authorized():
+            return
+        match = re.fullmatch(r"/v1/watches/([0-9a-f]{32})", self.path)
+        if match and self.server.monitor.stop(match[1], api_only=True):
+            self.reply(200, {"status": "ok"})
+        else:
+            self.reply(404, {"error": "not_found"})
+
     def _admin_get(self):
         try:
             if self.path == "/admin/api/accounts":
@@ -606,8 +622,15 @@ class APIHandler(BaseHTTPRequestHandler):
         if account_id is None:
             self.reply(404, {"error": "mailbox_not_imported"})
             return
+        requested_id = payload.get("watch_id") if notify else None
+        if requested_id is not None and (not isinstance(requested_id, str) or not re.fullmatch(r"[0-9a-f]{32}", requested_id)):
+            self.reply(400, {"error": "invalid_request"})
+            return
         try:
-            watch_id = self.server.monitor.start(account_id, address=address, notify=notify)
+            watch_id = self.server.monitor.start(account_id, address=address, notify=notify, watch_id=requested_id)
+        except ValueError:
+            self.reply(409, {"error": "watch_id_already_used"})
+            return
         except mail.MailError:
             self.reply(409, {"error": "webhook_not_configured"})
             return

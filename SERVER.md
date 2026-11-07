@@ -76,6 +76,8 @@ curl -fsS -X POST http://127.0.0.1:8770/v1/watches \
 
 使用同一个 Bearer 令牌调用 `GET /v1/watches/{watch_id}` 查询状态。状态为 `listening`、`delivering`、`received`、`delivered`、`replaced`、`cancelled`、`timeout`、`failed` 或 `delivery_failed`。未配置 Webhook 时，创建业务 API 任务返回 HTTP 409 和 `webhook_not_configured`。任务状态和待重试回调保存在进程内存，重启后需要重新创建任务。
 
+创建任务时可提供一个新的 32 位小写十六进制 `watch_id`。使用业务 API 密钥调用 `DELETE /v1/watches/{watch_id}`，可停止该 ID 对应的当前业务监听。已被替换的任务和管理页手动监听不会受到影响。关闭连接早于创建响应时，调用方也可以用预分配的 ID 取消。
+
 ## 接收回调
 
 Webhook 接收一个 JSON POST，正文只有字符串类型的验证码，保留前导零。
